@@ -1,8 +1,5 @@
 from model import ElectraBadClassifier
 import torch
-import torch.nn as nn
-import pandas as pd
-import numpy as np
 from sklearn.metrics import f1_score
 from utils.loss import FocalLoss
 
@@ -13,7 +10,18 @@ class TrainOperation:
         self.kwargs = kwargs
 
         self.loss_fn = FocalLoss(alpha = self.kwargs['loss_ALPHA'])
-        self.model = ElectraBadClassifier(kwargs['model_name'])
+
+        if kwargs['mode'] == 'valid':
+            model_name = self.parameters.base_save_ckpt_path
+        else:
+            if self.parameters.model_type == 0:
+                model_name = 'beomi/KcELECTRA-base'
+            elif self.parameters.model_type == 1:
+                model_name = 'tunib/electra-ko-base'
+            elif self.parameters.model_type == 2:
+                model_name = 'monologg/koelectra-base-v3-discriminator'
+
+        self.model = ElectraBadClassifier(model_name)
         self.model.to(self.kwargs['device'])
         
         self.not_same_data_dict = {'index' : [], 'text' : [], 'logit' : [], 'label' : []} # valid 중, 같지 않은 데이터 발견 시 expand함

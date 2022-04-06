@@ -12,6 +12,7 @@ import random
 import torch.backends.cudnn as cudnn
 
 from dataset_class import BadSentenceDataset
+from model import ElectraBadClassifier
 from train_operation_cls import TrainOperation
 
 # seed 고정
@@ -30,8 +31,13 @@ def get_parameters():
     parser.add_argument('-fp16', '--use_float_16', help = 'decise to apply float 16 or not', default = False, type = bool)
     parser.add_argument('-wd', '--weight_decay', help = 'define weight decay lambda', default = None, type = float)
     parser.add_argument('-b', '--base_save_ckpt_path', help = 'base path that will be saved trained checkpoints', default = None, type = str)
-    parser.add_argument('-e', '--epochs', help = 'full_train_epochs', default = 10, type = int)
+    parser.add_argument('-e', '--epochs', help = 'full_train_epochs', default = 5, type = int)
     parser.add_argument('-bs', '--batch_size', help = 'batch size using in train time', default = 64, type = int)
+    ## model_type
+    ## * 0 : beomi/KcELECTRA-base
+    ## * 1 : tunib/electra-ko-base
+    ## * 2 : monologg/koelectra-base-v3-discriminator
+    parser.add_argument('-m_t', '--model_type', help = 'used to choose what electra model using for training', default = 0, type = int)
 
     args = parser.parse_args()
 
@@ -45,11 +51,11 @@ def check_make_path(checkpoint_path):
 args = get_parameters()
 config = {
     'device' : 'cuda' if torch.cuda.is_available else 'cpu',
-    'train_dataset' : pd.read_csv('/workspace/jminj_bad_sentence_classifier/Bad_text_classifier/datasets/modify_version/del_double_quotes_unsmile_train_v1.0_relabel.tsv', sep = '\t'),
-    'valid_dataset' : pd.read_csv('/workspace/jminj_bad_sentence_classifier/Bad_text_classifier/datasets/modify_version/del_double_quotes_unsmile_valid_v1.0_relabel.tsv', sep = '\t'),
+    'train_dataset' : pd.read_csv('...', sep = '\t'),
+    'valid_dataset' : pd.read_csv('...', sep = '\t'),
     'warmup_step' : 500,
     'loss_ALPHA' : 0.8,
-    'model_name' : 'beomi/KcELECTRA-base'
+    'mode' : 'train'
 }
 
 class Trainer:
@@ -61,11 +67,11 @@ class Trainer:
         self.optimizer = AdamW(params = self.train_operation.model.parameters(), lr = self.parameters.learning_rate)
         self.lr_schedular = get_cosine_schedule_with_warmup(optimizer=self.optimizer, num_warmup_steps=kwargs['warmup_step'], num_training_steps=len(self.kwargs['train_dataset']) / self.parameters.batch_size * self.parameters.epochs)
 
-        self.train_pd_dataset = pd.read_csv('/workspace/jminj_bad_sentence_classifier/Bad_text_classifier/datasets/unsmile_train_v1.0.tsv', sep = '\t')
-        self.valid_pd_dataset = pd.read_csv('/workspace/jminj_bad_sentence_classifier/Bad_text_classifier/datasets/unsmile_valid_v1.0.tsv', sep = '\t')
+        # self.train_pd_dataset = pd.read_csv('/workspace/jminj_bad_sentence_classifier/Bad_text_classifier/datasets/concat_public_ok_data/result/concated_ko_smilegate_train.tsv', sep = '\t')
+        # self.valid_pd_dataset = pd.read_csv('/workspace/jminj_bad_sentence_classifier/Bad_text_classifier/datasets/unsmile_valid_v1.0.tsv', sep = '\t')
 
-        self.train_Dataset = BadSentenceDataset(self.kwargs['train_dataset'])
-        self.valid_Dataset = BadSentenceDataset(self.kwargs['valid_dataset'])
+        self.train_Dataset = BadSentenceDataset(self.parameters, target_dataset = self.kwargs['train_dataset'], mode = kwargs['mode'])
+        self.valid_Dataset = BadSentenceDataset(self.parameters, target_dataset = self.kwargs['valid_dataset'], mode = kwargs['mode'])
 
         self.train_dataloader = DataLoader(
             self.train_Dataset,
@@ -202,7 +208,13 @@ class Trainer:
         print(f'valid_f1_score : {step_f1_score_mean}')
 
     def forward(self, save_path):
-        each_save_path = save_path + f"/Focal_{self.kwargs['loss_ALPHA']}_AdamW_scheduler_{self.kwargs['warmup_step']}_lr_{self.parameters.learning_rate}_data"
+        model_name = 'kcElectra'
+        if self.parameters.model_type == 1:
+            model_name = 'tunibElectra'
+        elif self.parameters.model_type == 2:
+            model_name = 'koElectraV3'
+            
+        each_save_path = save_path + f"/{model_name}_Focal_{self.kwargs['loss_ALPHA']}_AdamW_scheduler_{self.kwargs['warmup_step']}_lr_{self.parameters.learning_rate}_data"
         
         for epoch in range(self.parameters.epochs):
             self.train(epoch)

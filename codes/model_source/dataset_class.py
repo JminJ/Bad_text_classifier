@@ -1,12 +1,23 @@
 from torch.utils.data import Dataset
-from transformers import ElectraTokenizer
+from transformers import AutoTokenizer
 import torch
 
 class BadSentenceDataset(Dataset):
-    def __init__(self, target_dataset):
+    def __init__(self, parameters, target_dataset, mode):
         super(BadSentenceDataset, self).__init__()
         self.target_dataset = target_dataset
-        self.tokenizer = ElectraTokenizer.from_pretrained('beomi/KcELECTRA-base') # 2022 ver도 test
+
+        if mode == 'valid':
+            model_name = parameters.base_save_ckpt_path
+        else:
+            if parameters.model_type == 0:
+                model_name = 'beomi/KcELECTRA-base'
+            elif parameters.model_type == 1:
+                model_name = 'tunib/electra-ko-base'
+            elif parameters.model_type == 2:
+                model_name = 'monologg/koelectra-base-v3-discriminator'
+
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name) 
 
     def __len__(self):
         return len(self.target_dataset)
