@@ -94,12 +94,10 @@ Note)
 </br>
 
 ## Contact
------
 * jminju254@gmail.com
 </br></br>
 
 ## Reference
------
 * [Beomi/KcELECTRA](https://github.com/Beomi/KcELECTRA)
 * [monologg/koELECTRA](https://github.com/monologg/KoELECTRA)
 * [tunib/electra-ko-base](https://huggingface.co/tunib/electra-ko-base)
